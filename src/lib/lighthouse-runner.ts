@@ -97,19 +97,19 @@ function extractAudits(lhr: RunnerResult["lhr"]): AuditSummary[] {
     .sort((a, b) => (a.score ?? 1) - (b.score ?? 1));
 }
 
+const TRANSIENT_PATTERNS = [
+  "performance mark",
+  "econnrefused",
+  "econnreset",
+  "navigation timeout",
+  "target closed",
+  "session closed",
+  "protocol error",
+];
+
 export function isTransientError(message: string): boolean {
-  const transientPatterns = [
-    "performance mark",
-    "ECONNREFUSED",
-    "ECONNRESET",
-    "Navigation timeout",
-    "Target closed",
-    "Session closed",
-    "Protocol error",
-  ];
-  return transientPatterns.some((pattern) =>
-    message.toLowerCase().includes(pattern.toLowerCase())
-  );
+  const lower = message.toLowerCase();
+  return TRANSIENT_PATTERNS.some((pattern) => lower.includes(pattern));
 }
 
 async function runSingleAttempt(
