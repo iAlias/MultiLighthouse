@@ -6,6 +6,8 @@ import type { RunnerResult } from "lighthouse";
 
 const MAX_CONCURRENT = 3;
 const TIMEOUT_MS = 90_000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2_000;
 
 let activeJobs = 0;
 const queue: Array<{
@@ -95,7 +97,22 @@ function extractAudits(lhr: RunnerResult["lhr"]): AuditSummary[] {
     .sort((a, b) => (a.score ?? 1) - (b.score ?? 1));
 }
 
-async function runSingle(
+export function isTransientError(message: string): boolean {
+  const transientPatterns = [
+    "performance mark",
+    "ECONNREFUSED",
+    "ECONNRESET",
+    "Navigation timeout",
+    "Target closed",
+    "Session closed",
+    "Protocol error",
+  ];
+  return transientPatterns.some((pattern) =>
+    message.toLowerCase().includes(pattern.toLowerCase())
+  );
+}
+
+async function runSingleAttempt(
   url: string,
   device: "mobile" | "desktop"
 ): Promise<LighthouseResult> {
@@ -162,19 +179,6 @@ async function runSingle(
       metrics: extractMetrics(lhr),
       rawJson: JSON.stringify(lhr),
     };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return {
-      url,
-      performance: 0,
-      accessibility: 0,
-      bestPractices: 0,
-      seo: 0,
-      audits: [],
-      metrics: {},
-      rawJson: "{}",
-      error: message,
-    };
   } finally {
     if (chrome) {
       try {
@@ -184,6 +188,40 @@ async function runSingle(
       }
     }
   }
+}
+
+async function runSingle(
+  url: string,
+  device: "mobile" | "desktop"
+): Promise<LighthouseResult> {
+  let lastError: string = "Unknown error";
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await runSingleAttempt(url, device);
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Unknown error";
+
+      if (attempt < MAX_RETRIES && isTransientError(lastError)) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  return {
+    url,
+    performance: 0,
+    accessibility: 0,
+    bestPractices: 0,
+    seo: 0,
+    audits: [],
+    metrics: {},
+    rawJson: "{}",
+    error: lastError,
+  };
 }
 
 function processQueue() {
