@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Site {
+  id                  String   @id @default(cuid())
+  url                 String   @unique
+  createdAt           DateTime @default(now())
+  monitoringEnabled   Boolean  @default(false)
+  monitoringFrequency String   @default("24h") // "6h" | "24h" | "7d"
+  reports             Report[]
+}
+
+model Report {
+  id            String   @id @default(cuid())
+  siteId        String
+  performance   Float
+  accessibility Float
+  bestPractices Float
+  seo           Float
+  device        String   @default("mobile") // "mobile" | "desktop"
+  rawJson       String   // Full Lighthouse JSON
+  createdAt     DateTime @default(now())
+  site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@index([createdAt])
+}
