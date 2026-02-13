@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Multi Lighthouse Analyzer
+
+A web application that analyzes multiple websites simultaneously using Google Lighthouse, providing performance, accessibility, best practices, and SEO scores with monitoring and historical trend tracking.
+
+## Features
+
+### Phase 1 - Multi-Site Analysis ✅
+- **Batch URL Analysis**: Analyze up to 10 URLs simultaneously
+- **Score Dashboard**: Performance, Accessibility, Best Practices, SEO scores
+- **Audit Details**: Full Lighthouse audit results with categorized issues
+- **Device Selection**: Mobile and Desktop analysis modes
+- **Results Table**: Color-coded score badges with status indicators
+
+### Phase 2 - Monitoring & History ✅
+- **Site Monitoring**: Toggle periodic analysis per site
+- **Flexible Scheduling**: Every 6 hours, daily, or weekly
+- **Historical Charts**: Line charts showing score trends over time
+- **Delta Tracking**: Compare current scores against previous reports
+
+### Security ✅
+- **SSRF Protection**: Blocks localhost, private IPs, and internal hostnames
+- **Rate Limiting**: In-memory rate limiting (5 requests/minute)
+- **Input Sanitization**: URL validation and normalization
+- **Concurrency Control**: Maximum 3 simultaneous Chrome instances
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React 19, Tailwind CSS, Recharts
+- **Backend**: Next.js API Routes, Lighthouse, Chrome Launcher
+- **Database**: SQLite via Prisma ORM
+- **Scheduler**: node-cron for periodic monitoring
+- **Testing**: Jest with ts-jest
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 20+
+- Chromium/Chrome browser
+
+### Installation
+
+```bash
+npm install
+```
+
+### Database Setup
+
+```bash
+npx prisma migrate dev
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Production
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Docker
 
-## Learn More
+```bash
+docker build -t multilighthouse .
+docker run -p 3000:3000 multilighthouse
+```
 
-To learn more about Next.js, take a look at the following resources:
+## API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### POST /api/analyze
+Analyze multiple URLs with Lighthouse.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```json
+{
+  "urls": ["https://example.com", "https://google.com"],
+  "device": "mobile"
+}
+```
 
-## Deploy on Vercel
+### GET /api/sites
+List all analyzed sites with latest report.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### GET /api/site/:id/reports
+Get historical reports for a site.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### POST /api/site/:id/monitor
+Toggle monitoring for a site.
+
+```json
+{
+  "enabled": true,
+  "frequency": "24h"
+}
+```
+
+### GET /api/report/:id
+Get full report details including raw Lighthouse data.
+
+## Testing
+
+```bash
+npm test
+```
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── analyze/          # Multi-site analysis endpoint
+│   │   ├── report/[id]/      # Single report details
+│   │   ├── site/[id]/
+│   │   │   ├── monitor/      # Monitoring toggle
+│   │   │   └── reports/      # Site report history
+│   │   └── sites/            # List all sites
+│   ├── site/[id]/            # Site detail page
+│   ├── layout.tsx
+│   └── page.tsx              # Dashboard
+├── components/
+│   ├── HistoryChart.tsx      # Line chart for trends
+│   ├── ScoreBadge.tsx        # Color-coded score badges
+│   └── ScoreCircle.tsx       # Circular score gauges
+└── lib/
+    ├── lighthouse-runner.ts  # Lighthouse with concurrency control
+    ├── monitor.ts            # Cron-based monitoring scheduler
+    ├── prisma.ts             # Database client singleton
+    └── url-utils.ts          # URL validation & SSRF protection
+```

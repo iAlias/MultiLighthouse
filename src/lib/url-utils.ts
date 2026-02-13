@@ -96,10 +96,7 @@ export function validateUrl(input: string): {
   }
 
   // Must have a valid hostname with at least one dot (domain)
-  if (
-    !parsed.hostname.includes(".") &&
-    !BLOCKED_HOSTNAMES.includes(parsed.hostname)
-  ) {
+  if (!parsed.hostname.includes(".")) {
     return { valid: false, error: "URL must have a valid domain" };
   }
 
